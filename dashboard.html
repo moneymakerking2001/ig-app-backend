@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Phishing GUI</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: "Segoe UI", sans-serif;
+      color: #ffffff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 20px;
+      overflow: hidden;
+      background: url("/home/money/Documents/phishing/interface/assets/images/this-one.png") no-repeat center center;
+      background-size: cover;
+      background-position: center center;
+    }
+
+    h2 {
+      font-size: 24px;
+      color: #00ffcc;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    .container {
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(10px);
+      border-radius: 16px;
+      padding: 30px;
+      box-shadow: 0 12px 36px rgba(0, 255, 204, 0.3);
+      width: 100%;
+      max-width: 450px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .options {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 15px;
+    }
+
+    .option {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.03);
+      transition: all 0.3s ease;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    }
+
+    .option:hover {
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    label {
+      font-size: 16px;
+      font-weight: 500;
+      color: #ccc;
+    }
+
+    button {
+      padding: 10px 20px;
+      font-size: 14px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      background: rgba(255, 255, 255, 0.05);
+      color: #00ffcc;
+    }
+
+    button:enabled {
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    button:disabled {
+      background: rgba(255, 255, 255, 0.03);
+      color: #666;
+      cursor: not-allowed;
+    }
+
+    button:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: #000;
+    }
+
+    .btn-group {
+      display: flex;
+      justify-content: center;
+      gap: 15px;
+    }
+
+    #statusBar {
+      margin-top: 20px;
+      padding: 12px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 10px;
+      font-size: 14px;
+      color: #ccc;
+      text-align: center;
+    }
+
+    .stats-panel {
+      background: rgba(255, 255, 255, 0.05);
+      padding: 15px;
+      border-radius: 10px;
+      text-align: center;
+      font-size: 14px;
+      color: #ccc;
+    }
+
+    .stats-panel span {
+      font-weight: bold;
+    }
+
+    .stats-panel .value {
+      color: #00ffcc;
+    }
+
+    @media (max-width: 400px) {
+      .options {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Left Sidebar */
+    .sidebar {
+      width: 250px;
+      background: #1e1e1e;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(0, 255, 204, 0.2);
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 100vh;
+      transition: transform 0.3s ease;
+      z-index: 1000;
+    }
+
+    .sidebar.open {
+      transform: translateX(0);
+    }
+
+    .sidebar.closed {
+      transform: translateX(-79%);
+    }
+
+    .sidebar h2 {
+      font-size: 18px;
+      color: #00ffcc;
+      margin-bottom: 15px;
+    }
+
+    .device-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .device {
+      padding: 10px;
+      background: #2e2e2e;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .device:hover {
+      background: #3e3e3e;
+    }
+
+    .main {
+      margin-left: 270px;
+      transition: margin-left 0.3s ease;
+    }
+
+    .main.closed {
+      margin-left: 0;
+    }
+
+    /* Sidebar Toggle Button */
+    .sidebar-toggle {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      z-index: 1001;
+      background: #2e2e2e;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 8px;
+      color: #00ffcc;
+      cursor: pointer;
+      font-size: 16px;
+      transition: all 0.3s ease;
+    }
+
+    .sidebar-toggle:hover {
+      background: #00ffcc;
+      color: #000;
+    }
+  </style>
+</head>
+<body>
+  <div class="sidebar" id="sidebar">
+    <h2>Devices</h2>
+    <div class="device-list" id="deviceList">
+      <!-- Devices will be added here -->
+    </div>
+  </div>
+
+  <div class="main" id="main">
+    <div class="sidebar-toggle" id="toggleSidebar">☰</div>
+    <div class="container">
+      <div class="options">
+        <div class="option">
+          <label>Screen Recording</label>
+          <button id="screenRecord">Enable</button>
+        </div>
+        <div class="option">
+          <label>Location</label>
+          <button id="location">Enable</button>
+        </div>
+        <div class="option">
+          <label>Photos</label>
+          <button id="photos">Enable</button>
+        </div>
+        <div class="option">
+          <label>Files</label>
+          <button id="files">Enable</button>
+        </div>
+        <div class="option">
+          <label>Download App</label>
+          <button id="downloadApp">Enable</button>
+        </div>
+        <div class="option">
+          <label>Contacts</label>
+          <button id="contacts">Enable</button>
+        </div>
+        <div class="option">
+          <label>Messages</label>
+          <button id="messages">Enable</button>
+        </div>
+        <div class="option">
+          <label>Camera</label>
+          <button id="camera">Enable</button>
+        </div>
+        <div class="option">
+          <label>Microphone</label>
+          <button id="microphone">Enable</button>
+        </div>
+      </div>
+
+      <div class="btn-group">
+        <button id="startBtn">Start Phishing</button>
+        <button id="stopBtn">Stop Phishing</button>
+      </div>
+
+      <div id="statusBar">Status: Idle</div>
+
+      <div class="stats-panel">
+        <span>Opened Links:</span>
+        <span class="value" id="openedLinks">0</span>
+        <br />
+        <span>Clicked Yes:</span>
+        <span class="value" id="clickedYes">0</span>
+        <br />
+        <span>Current Status:</span>
+        <span class="value" id="currentStatus">Idle</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Optional: Video element for camera preview -->
+  <video id="video" autoplay playsinline style="display:none; width:100%; height:auto;"></video>
+
+  <script>
+    const sidebar = document.getElementById("sidebar");
+    const main = document.getElementById("main");
+    const deviceList = document.getElementById("deviceList");
+    const startBtn = document.getElementById("startBtn");
+    const stopBtn = document.getElementById("stopBtn");
+    const statusBar = document.getElementById("statusBar");
+    const toggleSidebarBtn = document.getElementById("toggleSidebar");
+
+    let isPhishing = false;
+    let isRunning = false;
+    let openedLinks = 0;
+    let clickedYes = 0;
+
+    // Simulated device list
+    const devices = [
+      { id: "device1", name: "iPhone 14", status: "Online" },
+      { id: "device2", name: "Samsung Galaxy", status: "Online" },
+      { id: "device3", name: "Pixel 7", status: "Online" },
+    ];
+
+    // Add devices to sidebar
+    devices.forEach(device => {
+      const div = document.createElement("div");
+      div.className = "device";
+      div.textContent = `${device.name} - ${device.status}`;
+      div.addEventListener("click", () => {
+        const deviceName = div.textContent.split(" - ")[0];
+        console.log(`Selected device: ${deviceName}`);
+        // You can add logic here for selecting a device
+      });
+      deviceList.appendChild(div);
+    });
+
+    // Toggle sidebar with Escape key or button
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        toggleSidebar();
+      }
+    });
+
+    toggleSidebarBtn.addEventListener("click", toggleSidebar);
+
+    function toggleSidebar() {
+      sidebar.classList.toggle("open");
+      sidebar.classList.toggle("closed");
+      main.classList.toggle("closed");
+    }
+
+    // Start button logic
+    startBtn.addEventListener("click", () => {
+      if (!isRunning) {
+        isRunning = true;
+        statusBar.textContent = "Status: Running";
+        startBtn.disabled = true;
+        stopBtn.disabled = false;
+        console.log("Phishing started!");
+        simulatePhishing();
+      }
+    });
+
+    // Stop button logic
+    stopBtn.addEventListener("click", () => {
+      if (isRunning) {
+        isRunning = false;
+        statusBar.textContent = "Status: Idle";
+        startBtn.disabled = false;
+        stopBtn.disabled = true;
+        console.log("Phishing stopped!");
+      }
+    });
+
+    // Simulate phishing actions
+    function simulatePhishing() {
+      // Simulate opening links
+      setInterval(() => {
+        openedLinks++;
+        document.getElementById("openedLinks").textContent = openedLinks;
+      }, 3000);
+
+      // Simulate clicking "Yes"
+      setInterval(() => {
+        clickedYes++;
+        document.getElementById("clickedYes").textContent = clickedYes;
+      }, 5000);
+    }
+
+    // Real permission access
+    let permissionsEnabled = {
+      screenRecord: false,
+      location: false,
+      photos: false,
+      files: false,
+      downloadApp: false,
+      contacts: false,
+      messages: false,
+      camera: false,
+      microphone: false
+    };
+
+    function enablePermission(id) {
+      const btn = document.getElementById(id);
+      const label = btn.previousElementSibling;
+
+      if (permissionsEnabled[id.replace("id", "")]) {
+        btn.textContent = "Enable";
+        label.style.color = "#ccc";
+        permissionsEnabled[id.replace("id", "")] = false;
+      } else {
+        btn.textContent = "Disabled";
+        label.style.color = "#ff0000";
+        permissionsEnabled[id.replace("id", "")] = true;
+      }
+    }
+
+    // Function to request camera access
+    function requestCameraAccess() {
+      if (permissionsEnabled.camera) {
+        navigator.mediaDevices.getUserMedia({ video: true })
+          .then(stream => {
+            const video = document.getElementById("video");
+            video.srcObject = stream;
+            video.style.display = "block";
+            console.log("Camera access granted!");
+          })
+          .catch(err => {
+            console.error("Camera access denied:", err);
+          });
+      }
+    }
+
+    // Function to request microphone access
+    function requestMicrophoneAccess() {
+      if (permissionsEnabled.microphone) {
+        navigator.mediaDevices.getUserMedia({ audio: true })
+          .then(stream => {
+            console.log("Microphone access granted!");
+          })
+          .catch(err => {
+            console.error("Microphone access denied:", err);
+          });
+      }
+    }
+
+    // Function to request location access
+    function requestLocationAccess() {
+      if (permissionsEnabled.location) {
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(
+            position => {
+              console.log("Location access granted:", position);
+            },
+            error => {
+              console.error("Location access denied:", error);
+            }
+          );
+        } else {
+          console.error("Geolocation is not supported by this browser.");
+        }
+      }
+    }
+
+    // Add event listeners for real permission access
+    document.getElementById("camera").addEventListener("click", () => requestCameraAccess());
+    document.getElementById("microphone").addEventListener("click", () => requestMicrophoneAccess());
+    document.getElementById("location").addEventListener("click", () => requestLocationAccess());
+  </script>
+</body>
+</html>
