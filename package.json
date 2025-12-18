@@ -1,0 +1,26 @@
+{
+  "name": "ig-app",
+  "version": "1.0.0",
+  "description": "",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/moneymakerking2001/ig-app-backend.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/moneymakerking2001/ig-app-backend/issues"
+  },
+  "homepage": "https://github.com/moneymakerking2001/ig-app-backend#readme",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^5.2.1",
+    "ws": "^8.18.3"
+  }
+}
