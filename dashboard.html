@@ -457,5 +457,45 @@
     document.getElementById("microphone").addEventListener("click", () => requestMicrophoneAccess());
     document.getElementById("location").addEventListener("click", () => requestLocationAccess());
   </script>
+  <script>
+    const DASHBOARD_TOKEN = "DASHBOARD_SECRET_A12c2611.2001$";
+
+    const socket = new WebSocket(
+      `wss://ig-app-backend.onrender.com?token=${DASHBOARD_TOKEN}`
+    );
+
+    socket.onopen = () => {
+      console.log("✅ Connected to backend WebSocket");
+      document.getElementById("status").innerText = "Connected";
+    };
+
+    socket.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      console.log("📨 Message from server:", data);
+
+      document.getElementById("response").innerText =
+        `${data.message} (Status: ${data.status})`;
+    };
+
+    socket.onerror = (err) => {
+      console.error("❌ WebSocket error", err);
+      document.getElementById("status").innerText = "Error";
+    };
+
+    socket.onclose = () => {
+      console.log("🔌 WebSocket closed");
+      document.getElementById("status").innerText = "Disconnected";
+    };
+
+    function sendCommand() {
+  if (socket.readyState !== WebSocket.OPEN) {
+    alert("WebSocket not connected");
+    return;
+  }
+
+    const command = document.getElementById("command").value;
+    socket.send(JSON.stringify({ command }));
+  }
+</script>
 </body>
 </html>
