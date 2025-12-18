@@ -17,7 +17,12 @@ app.get("/", (req, res) => {
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
-const DASHBOARD_TOKEN = process.env.DASHBOARD_TOKEN || "DASHBOARD_SECRET_A12c2611.2001";
+const DASHBOARD_TOKEN = process.env.DASHBOARD_TOKEN;
+
+if (!DASHBOARD_TOKEN) {
+  throw new Error("❌ DASHBOARD_TOKEN is not set");
+}
+
 
 wss.on("connection", (ws, req) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
