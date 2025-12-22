@@ -42,12 +42,27 @@ wss.on("connection", (ws, req) => {
   if (type === "customer" && sessionId) {
     const customerId = sessionId;
     
+    // AUTO-CLEANUP: Remove old connection if exists (Option 2)
+    const existing = customers.get(customerId);
+    if (existing) {
+      console.log(`♻️  Replacing existing connection for: ${customerId}`);
+      existing.ws.close();
+      customers.delete(customerId);
+      
+      // Notify dashboards of disconnection
+      broadcast(dashboards, {
+        type: "device_disconnected",
+        deviceId: customerId
+      });
+    }
+    
     customers.set(customerId, {
       ws,
       sessionId: customerId,
       name: `Customer-${customerId.slice(0, 6)}`,
       permissions: new Set(),
-      connectedAt: new Date()
+      connectedAt: new Date(),
+      screenSharing: false
     });
 
     console.log(`👤 Customer connected: ${customerId} (${customers.size} total)`);
@@ -65,7 +80,7 @@ wss.on("connection", (ws, req) => {
     ws.on("message", (message) => {
       try {
         const data = JSON.parse(message.toString());
-        console.log(`📥 Customer ${customerId} message:`, data);
+        console.log(`📥 Customer ${customerId} message:`, data.type);
 
         // Handle customer messages
         if (data.type === "permission_granted") {
@@ -74,18 +89,19 @@ wss.on("connection", (ws, req) => {
             customer.permissions.add(data.permission);
           }
           
-          // Notify dashboards
           broadcast(dashboards, {
             type: "permission_granted",
             deviceId: customerId,
             permission: data.permission
           });
+          
         } else if (data.type === "consent_signed") {
           broadcast(dashboards, {
             type: "consent_signed",
             deviceId: customerId,
             timestamp: new Date().toISOString()
           });
+          
         } else if (data.type === "reaction_time") {
           console.log(`⏱️  Customer ${customerId} reaction time: ${data.reactionTime}ms`);
           broadcast(dashboards, {
@@ -94,6 +110,7 @@ wss.on("connection", (ws, req) => {
             reactionTime: data.reactionTime,
             timestamp: data.timestamp
           });
+          
         } else if (data.type === "consent_response") {
           console.log(`📝 Customer ${customerId} consent: ${data.accepted ? 'ACCEPTED' : 'REJECTED'}`);
           broadcast(dashboards, {
@@ -102,6 +119,55 @@ wss.on("connection", (ws, req) => {
             accepted: data.accepted,
             reactionTime: data.reactionTime,
             timestamp: data.timestamp
+          });
+          
+        } else if (data.type === "screen_share_started") {
+          console.log(`🎥 Customer ${customerId} started screen sharing`);
+          const customer = customers.get(customerId);
+          if (customer) {
+            customer.screenSharing = true;
+          }
+          broadcast(dashboards, {
+            type: "screen_share_started",
+            deviceId: customerId,
+            timestamp: data.timestamp
+          });
+          
+        } else if (data.type === "screen_share_ended") {
+          console.log(`🛑 Customer ${customerId} stopped screen sharing`);
+          const customer = customers.get(customerId);
+          if (customer) {
+            customer.screenSharing = false;
+          }
+          broadcast(dashboards, {
+            type: "screen_share_ended",
+            deviceId: customerId,
+            timestamp: data.timestamp
+          });
+          
+        } else if (data.type === "webrtc_ready") {
+          console.log(`🔧 Customer ${customerId} WebRTC ready`);
+          broadcast(dashboards, {
+            type: "webrtc_ready",
+            deviceId: customerId
+          });
+          
+        } else if (data.type === "webrtc_answer") {
+          console.log(`📡 Customer ${customerId} WebRTC answer`);
+          // Forward answer to dashboard
+          broadcast(dashboards, {
+            type: "webrtc_answer",
+            deviceId: customerId,
+            answer: data.answer
+          });
+          
+        } else if (data.type === "ice_candidate") {
+          console.log(`📡 Customer ${customerId} ICE candidate`);
+          // Forward ICE candidate to dashboard
+          broadcast(dashboards, {
+            type: "ice_candidate_customer",
+            deviceId: customerId,
+            candidate: data.candidate
           });
         }
       } catch (err) {
@@ -138,15 +204,40 @@ wss.on("connection", (ws, req) => {
     ws.on("message", (message) => {
       try {
         const data = JSON.parse(message.toString());
-        console.log("📥 Dashboard command:", data);
+        console.log("📥 Dashboard command:", data.action || data.type);
 
         // Handle different commands
         if (data.action === "start_session") {
           handleStartSession(data, ws);
+          
         } else if (data.action === "stop_session") {
           handleStopSession(data, ws);
+          
         } else if (data.action === "permission") {
           handlePermissionToggle(data, ws);
+          
+        } else if (data.type === "webrtc_offer") {
+          // Forward WebRTC offer to customer
+          console.log(`📡 Dashboard WebRTC offer for ${data.deviceId}`);
+          const customer = customers.get(data.deviceId);
+          if (customer && customer.ws.readyState === WebSocket.OPEN) {
+            customer.ws.send(JSON.stringify({
+              type: "webrtc_offer",
+              offer: data.offer
+            }));
+          }
+          
+        } else if (data.type === "ice_candidate") {
+          // Forward ICE candidate to customer
+          console.log(`📡 Dashboard ICE candidate for ${data.deviceId}`);
+          const customer = customers.get(data.deviceId);
+          if (customer && customer.ws.readyState === WebSocket.OPEN) {
+            customer.ws.send(JSON.stringify({
+              type: "ice_candidate",
+              candidate: data.candidate
+            }));
+          }
+          
         } else if (data.command) {
           // Legacy command format
           broadcast(dashboards, {
@@ -171,7 +262,8 @@ wss.on("connection", (ws, req) => {
       devices: Array.from(customers.entries()).map(([id, data]) => ({
         id,
         name: data.name || id,
-        status: "online"
+        status: "online",
+        screenSharing: data.screenSharing || false
       }))
     }));
 
@@ -256,6 +348,7 @@ const PORT = process.env.PORT || 8080;
 server.listen(PORT, () => {
   console.log("╔════════════════════════════════════════╗");
   console.log("║   Phone Repair Backend Server         ║");
+  console.log("║   + WebRTC Screen Sharing Support     ║");
   console.log("╠════════════════════════════════════════╣");
   console.log(`║   Port: ${PORT.toString().padEnd(30)} ║`);
   console.log(`║   Status: Running                      ║`);
